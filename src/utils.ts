@@ -1,30 +1,5 @@
 import { PaginationFilters, PaginationOrder } from "./types";
 
-export const ALLOW_OPERATORS = [
-  'eq',
-  'neq',
-  'gt',
-  'lt',
-  'gte',
-  'lte',
-  'in',
-  'nin',
-  'like',
-  'ilike',
-  'nlike',
-  'nilike',
-  'is',
-  'isnot',
-  'bw',
-  'nbw',
-  '=',
-  '!=',
-  '>',
-  '<',
-  '>=',
-  '<=',
-];
-
 export const DEFAULT_LIMIT = 10;
 
 export const MAX_LIMIT = 1000;

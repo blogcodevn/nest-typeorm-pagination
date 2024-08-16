@@ -1,13 +1,12 @@
-export type PaginationFilters = Record<
-  string,
-  | string
+export type PaginationFilter = string
   | number
   | boolean
   | {
     value: string | number | boolean;
     operator?: string;
-  }
->;
+  };
+
+export type PaginationFilters = Record<string, PaginationFilter>;
 
 export type PaginationOrder = Record<string, 0 | 1>;
 

@@ -1,10 +1,21 @@
 {
   "name": "@blogcode/nest-typeorm-pagination",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Pagination offset-based and cursor-based for NestJS",
+  "keywords": [
+    "nestjs",
+    "typeorm",
+    "pagination",
+    "offset-based",
+    "cursor-based"
+  ],
   "main": "./index.js",
   "types": "./index.d.ts",
-  "repository": "git@github.com:blogcodevn/nest-typeorm-pagination.git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blogcodevn/nest-typeorm-pagination.git"
+  },
+  "homepage": "https://github.com/blogcodevn/nest-typeorm-pagination#readme",
   "author": "Canh Nguyen Van <ngvcanh2014@gmail.com>",
   "license": "MIT",
   "publishConfig": {

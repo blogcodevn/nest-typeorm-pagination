@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { ALLOW_OPERATORS, DEFAULT_LIMIT, getCursorDirection, isBaseType, MAX_LIMIT } from "./utils";
-import { ObjectLiteral, Repository, SelectQueryBuilder } from "typeorm";
-import { PaginationCursorResult, PaginationFilters, PaginationOffsetResult } from "./types";
+import { DEFAULT_LIMIT, getCursorDirection, isBaseType, MAX_LIMIT } from "./utils";
+import { DataSource, ObjectLiteral, Repository, SelectQueryBuilder } from "typeorm";
+import { PaginationCursorResult, PaginationFilter, PaginationFilters, PaginationOffsetResult } from "./types";
 import { PaginationCursorDto, PaginationOffsetDto } from "./dto";
+import { operators } from "./operators";
 
 @Injectable()
 export class PaginationService {
@@ -12,6 +13,8 @@ export class PaginationService {
   private entityName: string;
   private resultName: string = 'data';
   private primaryKey: string = 'id';
+
+  constructor(private readonly dataSource: DataSource) {}
 
   setFilterMapping(mapping: Record<string, string>) {
     this.filterMapping = { ...mapping };
@@ -64,9 +67,7 @@ export class PaginationService {
       return '=';
     }
 
-    return ALLOW_OPERATORS.includes(operator.toLowerCase())
-      ? operator.toLowerCase()
-      : '=';
+    return operators[operator.toLowerCase()] || '=';
   }
 
   private getLimit(limit: number | undefined) {
@@ -75,61 +76,72 @@ export class PaginationService {
       : this.defaultLimit;
   }
 
+  private parseValue(value: string | number | boolean, operator: string | undefined) {
+    if (['like', 'ilike', 'nlike', 'nilike'].includes(operator?.toLowerCase() ?? '')) {
+      return `%${value}%`;
+    }
+
+    return value;
+  }
+
+  private genCondition(operator: string, dbField: string, key: string, isArray = false) {
+    const ope = this.getOperator(operator);
+    const arrFields = dbField.split(',').filter((field) => field.trim()).map((field) => {
+      if (['BETWEEN', 'NOT BETWEEN'].includes(ope)) {
+        if (isArray) {
+          return `${field} ${ope} :${key}Start AND :${key}End`;
+        }
+        const o = ope === 'BETWEEN' ? '=' : '!=';
+        return `${field} ${o} :${key}`;
+      }
+
+      return `${field} ${ope} :${key}`;
+    });
+
+    if (arrFields.length === 1) {
+      return arrFields[0];
+    }
+
+    return `(${arrFields.join(' OR ')})`;
+  }
+
+  private genFullTextSearch(dbField: string, key: string) {
+    switch (this.dataSource.options.type) {
+      case 'postgres':
+        return `${key} @@ ${dbField}`;
+      case 'mysql':
+      case 'mariadb':
+        return `MATCH (${dbField}) AGAINST (:${key} IN BOOLEAN MODE)`;
+      default:
+        return '';
+    }
+  }
+
   private applyFilterCondition<T extends ObjectLiteral>(
     query: SelectQueryBuilder<T>,
     dbField: string,
     key: string,
-    filter: string | number | boolean | { value: any; operator?: string },
+    filter: PaginationFilter,
   ) {
     if (isBaseType(filter)) {
-      query.andWhere(`${dbField} = :${key}`, { [key]: filter });
+      query.andWhere(this.genCondition('=', dbField, key), { [key]: filter });
       return;
     }
+    const { value, operator } = filter;
 
-    const operator = this.getOperator(filter.operator);
-    const value = filter.value;
-
-    const condition =
-      {
-        eq: `${dbField} = :${key}`,
-        '=': `${dbField} = :${key}`,
-        neq: `${dbField} != :${key}`,
-        '!=': `${dbField} != :${key}`,
-        gt: `${dbField} > :${key}`,
-        '>': `${dbField} > :${key}`,
-        lt: `${dbField} < :${key}`,
-        '<': `${dbField} < :${key}`,
-        gte: `${dbField} >= :${key}`,
-        '>=': `${dbField} >= :${key}`,
-        lte: `${dbField} <= :${key}`,
-        '<=': `${dbField} <= :${key}`,
-        like: `${dbField} LIKE :${key}`,
-        ilike: `${dbField} ILIKE :${key}`,
-        nlike: `${dbField} NOT LIKE :${key}`,
-        nilike: `${dbField} NOT ILIKE :${key}`,
-        is: `${dbField} IS :${key}`,
-        isnot: `${dbField} IS NOT :${key}`,
-        in: `${dbField} IN (:...${key})`,
-        nin: `${dbField} NOT IN (:...${key})`,
-        bw:
-          Array.isArray(value) && value.length === 2
-            ? `${dbField} BETWEEN :${key}Start AND :${key}End`
-            : `${dbField} = :${key}`,
-        nbw:
-          Array.isArray(value) && value.length === 2
-            ? `${dbField} NOT BETWEEN :${key}Start AND :${key}End`
-            : `${dbField} != :${key}`,
-      }[operator] || `${dbField} = :${key}`;
+    if (operator?.toLowerCase() === 'fts') {
+      query.andWhere(this.genFullTextSearch(dbField, key), { [key]: value });
+    }
 
     const params = {
       [`${key}Start`]:
         Array.isArray(value) && value.length === 2 ? value[0] : undefined,
       [`${key}End`]:
         Array.isArray(value) && value.length === 2 ? value[1] : undefined,
-      [key]: Array.isArray(value) && value.length === 1 ? value[0] : value,
+      [key]: this.parseValue(Array.isArray(value) && value.length === 1 ? value[0] : value, operator),
     };
 
-    query.andWhere(condition, params);
+    query.andWhere(this.genCondition(operator || "=", dbField, key, Array.isArray(value)), params);
   }
 
   private applyFilters<T extends ObjectLiteral>(

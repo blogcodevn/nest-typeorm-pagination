@@ -3,6 +3,12 @@
 - Current support `PostgreSQL`, `MySQL`, `MariaDB`.
 - Others DB does not tested.
 
+## CHANGELOG
+
+- `0.0.2`:
+  - Support search `OR`
+  - Support operator `fts` (Full Text Search)
+
 ## Installation
 
 Install dependencies
@@ -369,3 +375,100 @@ async getCursorTotal<T extends ObjectLiteral>(
   - `repository`: Repository of the entity.
   - `dto`: DTO object containing filter information.
 - **Returns**: `Promise<number>` - Total number of items based on the filters.
+
+## Search OR
+
+Set mapping fields
+
+```ts
+@Injectable()
+export class UserService {
+  constructor(private readonly paginationService: PaginationService) {
+    this.paginationService.setFilterMapping({
+      name: 'username, email, firstname, lastname'
+    });
+  }
+}
+```
+
+Query string:
+
+```txt
+filters[name]=text
+```
+
+**Result:**
+
+```sql
+WHERE (username = "text" OR email = "text" OR firstname = "text" OR lastname = "text")
+```
+
+Query string:
+
+```txt
+filters[name][value]=text&filter[name][operator]=like
+```
+
+**Result:**
+
+```sql
+WHERE (username LIKE "%text%" OR email LIKE "%text%" OR firstname LIKE "%text%" OR lastname = "%text%")
+```
+
+## Full Text Search
+
+### PostgreSQL
+
+Set mapping fields
+
+```ts
+@Injectable()
+export class UserService {
+  constructor(private readonly paginationService: PaginationService) {
+    this.paginationService.setFilterMapping({
+      name: "to_tsquery('english', ':name')"
+    });
+  }
+}
+```
+
+Property `name` and `:name` must be same word.
+
+Query string
+
+```txt
+filters[name][value]=search%20keyword&filters[name][operator]=fts
+```
+
+**Result:**
+
+```sql
+WHERE name @@ to_tsquery('english', 'search 20keyword')
+```
+
+### MySQL
+
+Set mapping fields
+
+```ts
+@Injectable()
+export class UserService {
+  constructor(private readonly paginationService: PaginationService) {
+    this.paginationService.setFilterMapping({
+      name: 'username, email, firstname, lastname'
+    });
+  }
+}
+```
+
+Query string
+
+```txt
+filters[name][value]=search%20keyword&filters[name][operator]=fts
+```
+
+**Result:**
+
+```sql
+WHERE MATCH (username, email, firstname, lastname) AGAINST ('search keyword' IN BOOLEAN MODE)
+```
