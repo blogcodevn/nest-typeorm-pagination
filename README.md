@@ -5,6 +5,9 @@
 
 ## CHANGELOG
 
+- `0.0.5`:
+  - Fix build condition where with `IS NULL` and `IS NOT NULL`;
+
 - `0.0.4`:
   - Normalize field for query. (EX: group => "group" with PostgresQL)
 

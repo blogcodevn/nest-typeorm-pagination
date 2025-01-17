@@ -141,10 +141,27 @@ export class PaginationService {
     filter: PaginationFilter,
   ) {
     if (isBaseType(filter)) {
+      if (filter === null) {
+        query.andWhere(`${this.normalize(dbField)} IS NULL`);
+        return;
+      }
       query.andWhere(this.genCondition('=', dbField, key), { [key]: filter });
       return;
     }
     const { value, operator } = filter;
+
+    if (value === null) {
+      if (!operator || operator?.toLowerCase() === 'is' || operator === "=") {
+        query.andWhere(`${this.normalize(dbField)} IS NULL`);
+        return;
+      }
+
+      if (operator?.toLowerCase() === 'isnot' || operator === "!=") {
+        query.andWhere(`${this.normalize(dbField)} IS NOT NULL`);
+        return;
+      }
+      return;
+    }
 
     if (operator?.toLowerCase() === 'fts') {
       query.andWhere(this.genFullTextSearch(dbField, key), { [key]: value });
@@ -226,10 +243,11 @@ export class PaginationService {
     const primary = this.primaryKey;
 
     this.applyFilters(query, filters as PaginationFilters);
+    const w = this.getWrapper();
 
     if (cursor) {
       const comparisonOperator = direction === 'next' ? '>' : '<';
-      query.andWhere(`${entityName}.${primary} ${comparisonOperator} :cursor`, {
+      query.andWhere(`${w}${entityName}${w}.${w}${primary}${w} ${comparisonOperator} :cursor`, {
         cursor,
       });
     }
