@@ -1,8 +1,9 @@
 export type PaginationFilter = string
   | number
   | boolean
+  | null
   | {
-    value: string | number | boolean;
+    value: string | number | boolean | null;
     operator?: string;
   };
 

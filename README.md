@@ -5,6 +5,9 @@
 
 ## CHANGELOG
 
+- `0.0.3`:
+  - Add `null` is base type.
+
 - `0.0.2`:
   - Support search `OR`
   - Support operator `fts` (Full Text Search)

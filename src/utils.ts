@@ -4,8 +4,8 @@ export const DEFAULT_LIMIT = 10;
 
 export const MAX_LIMIT = 1000;
 
-export function isBaseType(value: any): value is string | number | boolean {
-  return ['string', 'number', 'boolean'].includes(typeof value);
+export function isBaseType(value: any): value is string | number | boolean | null {
+  return ['string', 'number', 'boolean'].includes(typeof value) || value === null;
 }
 
 export function getFilters(query: Record<string, any> | undefined) {
