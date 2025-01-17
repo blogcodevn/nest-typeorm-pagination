@@ -89,13 +89,13 @@ export class PaginationService {
     const arrFields = dbField.split(',').filter((field) => field.trim()).map((field) => {
       if (['BETWEEN', 'NOT BETWEEN'].includes(ope)) {
         if (isArray) {
-          return `${field} ${ope} :${key}Start AND :${key}End`;
+          return `${this.normalize(field)} ${ope} :${key}Start AND :${key}End`;
         }
         const o = ope === 'BETWEEN' ? '=' : '!=';
-        return `${field} ${o} :${key}`;
+        return `${this.normalize(field)} ${o} :${key}`;
       }
 
-      return `${field} ${ope} :${key}`;
+      return `${this.normalize(field)} ${ope} :${key}`;
     });
 
     if (arrFields.length === 1) {
@@ -105,13 +105,30 @@ export class PaginationService {
     return `(${arrFields.join(' OR ')})`;
   }
 
+  private getWrapper() {
+    switch (this.dataSource.options.type) {
+      case 'postgres':
+        return '"';
+      case 'mysql':
+      case 'mariadb':
+        return '`';
+      default:
+        return '';
+    }
+  }
+
+  private normalize(name: string) {
+    const w = this.getWrapper();
+    return `${w}${name}${w}`;
+  }
+
   private genFullTextSearch(dbField: string, key: string) {
     switch (this.dataSource.options.type) {
       case 'postgres':
-        return `${key} @@ ${dbField}`;
+        return `${key} @@ ${this.normalize(dbField)}`;
       case 'mysql':
       case 'mariadb':
-        return `MATCH (${dbField}) AGAINST (:${key} IN BOOLEAN MODE)`;
+        return `MATCH (${this.normalize(dbField)}) AGAINST (:${key} IN BOOLEAN MODE)`;
       default:
         return '';
     }

@@ -1,9 +1,12 @@
 # @blogcode/nest-typeorm-pagination
 
-- Current support `PostgreSQL`, `MySQL`, `MariaDB`.
+- Current support `PostgresQL`, `MySQL`, `MariaDB`.
 - Others DB does not tested.
 
 ## CHANGELOG
+
+- `0.0.4`:
+  - Normalize field for query. (EX: group => "group" with PostgresQL)
 
 - `0.0.3`:
   - Add `null` is base type.

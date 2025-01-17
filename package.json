@@ -1,6 +1,6 @@
 {
   "name": "@blogcode/nest-typeorm-pagination",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Pagination offset-based and cursor-based for NestJS",
   "keywords": [
     "nestjs",
